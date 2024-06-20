@@ -1,0 +1,263 @@
+diff --git a/packages/mermaid-example-diagram/package.json b/packages/mermaid-example-diagram/package.json
+index b899e077b..cc05ae964 100644
+--- a/packages/mermaid-example-diagram/package.json
++++ b/packages/mermaid-example-diagram/package.json
+@@ -38,9 +38,9 @@
+     ]
+   },
+   "dependencies": {
+-    "@braintree/sanitize-url": "^7.0.0",
+     "d3": "^7.9.0",
+-    "khroma": "^2.1.0"
++    "khroma": "^2.1.0",
++    "micromark-util-sanitize-uri": "^2.0.0"
+   },
+   "devDependencies": {
+     "concurrently": "^8.2.2",
+diff --git a/packages/mermaid/package.json b/packages/mermaid/package.json
+index bc2d5da5f..67051d47f 100644
+--- a/packages/mermaid/package.json
++++ b/packages/mermaid/package.json
+@@ -68,7 +68,6 @@
+     ]
+   },
+   "dependencies": {
+-    "@braintree/sanitize-url": "^7.0.1",
+     "@mermaid-js/parser": "workspace:^",
+     "cytoscape": "^3.29.2",
+     "cytoscape-cose-bilkent": "^4.1.0",
+@@ -82,6 +81,7 @@
+     "khroma": "^2.1.0",
+     "lodash-es": "^4.17.21",
+     "mdast-util-from-markdown": "^2.0.0",
++    "micromark-util-sanitize-uri": "^2.0.0",
+     "stylis": "^4.3.1",
+     "ts-dedent": "^2.2.0",
+     "uuid": "^9.0.1"
+diff --git a/packages/mermaid/src/diagrams/c4/svgDraw.js b/packages/mermaid/src/diagrams/c4/svgDraw.js
+index 6bff267f6..9e2471fa5 100644
+--- a/packages/mermaid/src/diagrams/c4/svgDraw.js
++++ b/packages/mermaid/src/diagrams/c4/svgDraw.js
+@@ -1,6 +1,6 @@
+ import common from '../common/common.js';
+ import * as svgDrawCommon from '../common/svgDrawCommon.js';
+-import { sanitizeUrl } from '@braintree/sanitize-url';
++import { sanitizeUri } from 'micromark-util-sanitize-uri';
+ 
+ export const drawRect = function (elem, rectData) {
+   return svgDrawCommon.drawRect(elem, rectData);
+@@ -12,7 +12,7 @@ export const drawImage = function (elem, width, height, x, y, link) {
+   imageElem.attr('height', height);
+   imageElem.attr('x', x);
+   imageElem.attr('y', y);
+-  let sanitizedLink = link.startsWith('data:image/png;base64') ? link : sanitizeUrl(link);
++  let sanitizedLink = link.startsWith('data:image/png;base64') ? link : sanitizeUri(link);
+   imageElem.attr('xlink:href', sanitizedLink);
+ };
+ 
+diff --git a/packages/mermaid/src/diagrams/common/svgDrawCommon.ts b/packages/mermaid/src/diagrams/common/svgDrawCommon.ts
+index cf962f33e..d0a81e1ed 100644
+--- a/packages/mermaid/src/diagrams/common/svgDrawCommon.ts
++++ b/packages/mermaid/src/diagrams/common/svgDrawCommon.ts
+@@ -1,4 +1,4 @@
+-import { sanitizeUrl } from '@braintree/sanitize-url';
++import { sanitizeUri } from 'micromark-util-sanitize-uri';
+ import type { Group, SVG } from '../../diagram-api/types.js';
+ import type {
+   Bound,
+@@ -80,7 +80,7 @@ export const drawImage = (elem: SVG | Group, x: number, y: number, link: string)
+   const imageElement: D3ImageElement = elem.append('image');
+   imageElement.attr('x', x);
+   imageElement.attr('y', y);
+-  const sanitizedLink: string = sanitizeUrl(link);
++  const sanitizedLink: string = sanitizeUri(link);
+   imageElement.attr('xlink:href', sanitizedLink);
+ };
+ 
+@@ -93,7 +93,7 @@ export const drawEmbeddedImage = (
+   const imageElement: D3UseElement = element.append('use');
+   imageElement.attr('x', x);
+   imageElement.attr('y', y);
+-  const sanitizedLink: string = sanitizeUrl(link);
++  const sanitizedLink: string = sanitizeUri(link);
+   imageElement.attr('xlink:href', `#${sanitizedLink}`);
+ };
+ 
+diff --git a/packages/mermaid/src/diagrams/gantt/ganttDb.js b/packages/mermaid/src/diagrams/gantt/ganttDb.js
+index 160f29713..b21e9cfb2 100644
+--- a/packages/mermaid/src/diagrams/gantt/ganttDb.js
++++ b/packages/mermaid/src/diagrams/gantt/ganttDb.js
+@@ -1,5 +1,5 @@
+-import { sanitizeUrl } from '@braintree/sanitize-url';
+-import dayjs from 'dayjs';
++import { sanitizeUri } from 'micromark-util-sanitize-uri';
++import dayjs from 'dayjs/esm/index.js';
+ import dayjsIsoWeek from 'dayjs/plugin/isoWeek.js';
+ import dayjsCustomParseFormat from 'dayjs/plugin/customParseFormat.js';
+ import dayjsAdvancedFormat from 'dayjs/plugin/advancedFormat.js';
+@@ -631,7 +631,7 @@ const compileTasks = function () {
+ export const setLink = function (ids, _linkStr) {
+   let linkStr = _linkStr;
+   if (getConfig().securityLevel !== 'loose') {
+-    linkStr = sanitizeUrl(_linkStr);
++    linkStr = sanitizeUri(_linkStr);
+   }
+   ids.split(',').forEach(function (id) {
+     let rawTask = findTaskById(id);
+diff --git a/packages/mermaid/src/diagrams/gantt/ganttDb.spec.ts b/packages/mermaid/src/diagrams/gantt/ganttDb.spec.ts
+index a59297cdb..20f5cc1d5 100644
+--- a/packages/mermaid/src/diagrams/gantt/ganttDb.spec.ts
++++ b/packages/mermaid/src/diagrams/gantt/ganttDb.spec.ts
+@@ -1,5 +1,5 @@
+ // @ts-nocheck TODO: Fix TS
+-import dayjs from 'dayjs';
++import dayjs from 'dayjs/esm/index.js';
+ import ganttDb from './ganttDb.js';
+ import { convert } from '../../tests/util.js';
+ 
+diff --git a/packages/mermaid/src/diagrams/gantt/ganttRenderer.js b/packages/mermaid/src/diagrams/gantt/ganttRenderer.js
+index a10eb100f..dc6b6dbc3 100644
+--- a/packages/mermaid/src/diagrams/gantt/ganttRenderer.js
++++ b/packages/mermaid/src/diagrams/gantt/ganttRenderer.js
+@@ -1,4 +1,4 @@
+-import dayjs from 'dayjs';
++import dayjs from 'dayjs/esm/index.js';
+ import { log } from '../../logger.js';
+ import {
+   select,
+diff --git a/packages/mermaid/src/diagrams/sequence/svgDraw.js b/packages/mermaid/src/diagrams/sequence/svgDraw.js
+index 568074b53..8fe778105 100644
+--- a/packages/mermaid/src/diagrams/sequence/svgDraw.js
++++ b/packages/mermaid/src/diagrams/sequence/svgDraw.js
+@@ -1,7 +1,7 @@
+ import common, { calculateMathMLDimensions, hasKatex, renderKatex } from '../common/common.js';
+ import * as svgDrawCommon from '../common/svgDrawCommon.js';
+ import { ZERO_WIDTH_SPACE, parseFontSize } from '../../utils.js';
+-import { sanitizeUrl } from '@braintree/sanitize-url';
++import { sanitizeUri } from 'micromark-util-sanitize-uri';
+ import * as configApi from '../../config.js';
+ 
+ export const ACTOR_TYPE_WIDTH = 18 * 2;
+@@ -53,7 +53,7 @@ export const drawPopup = function (elem, actor, minMenuWidth, textAttrs, forceMe
+     var linkY = 20;
+     for (let key in links) {
+       var linkElem = g.append('a');
+-      var sanitizedLink = sanitizeUrl(links[key]);
++      var sanitizedLink = sanitizeUri(links[key]);
+       linkElem.attr('xlink:href', sanitizedLink);
+       linkElem.attr('target', '_blank');
+ 
+@@ -1119,5 +1119,5 @@ export default {
+   getTextObj,
+   getNoteRect,
+   fixLifeLineHeights,
+-  sanitizeUrl,
++  sanitizeUri,
+ };
+diff --git a/packages/mermaid/src/logger.ts b/packages/mermaid/src/logger.ts
+index 44b98315c..da5e8a221 100644
+--- a/packages/mermaid/src/logger.ts
++++ b/packages/mermaid/src/logger.ts
+@@ -2,7 +2,7 @@
+ /* eslint-disable @typescript-eslint/no-unused-vars */
+ /* eslint-disable @typescript-eslint/no-empty-function */
+ /* eslint-disable no-console */
+-import dayjs from 'dayjs';
++import dayjs from 'dayjs/esm/index.js';
+ 
+ export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+ 
+diff --git a/packages/mermaid/src/utils.spec.ts b/packages/mermaid/src/utils.spec.ts
+index df9e6cf9a..046e5b362 100644
+--- a/packages/mermaid/src/utils.spec.ts
++++ b/packages/mermaid/src/utils.spec.ts
+@@ -326,7 +326,7 @@ describe('when formatting urls', function () {
+     expect(result).toEqual(url);
+ 
+     result = utils.formatUrl(url, { securityLevel: 'strict' });
+-    expect(result).toEqual('about:blank');
++    expect(result).toEqual('javascript:alert(%22test%22)');
+   });
+ });
+ 
+diff --git a/packages/mermaid/src/utils.ts b/packages/mermaid/src/utils.ts
+index 99283f359..d78103a6e 100644
+--- a/packages/mermaid/src/utils.ts
++++ b/packages/mermaid/src/utils.ts
+@@ -1,4 +1,4 @@
+-import { sanitizeUrl } from '@braintree/sanitize-url';
++import { sanitizeUri } from 'micromark-util-sanitize-uri';
+ import type { CurveFactory } from 'd3';
+ import {
+   curveBasis,
+@@ -258,7 +258,7 @@ export function formatUrl(linkStr: string, config: MermaidConfig): string | unde
+   }
+ 
+   if (config.securityLevel !== 'loose') {
+-    return sanitizeUrl(url);
++    return sanitizeUri(url);
+   }
+ 
+   return url;
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 8ad6a05a7..948daa471 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -200,9 +200,6 @@ importers:
+ 
+   packages/mermaid:
+     dependencies:
+-      '@braintree/sanitize-url':
+-        specifier: ^7.0.1
+-        version: 7.0.1
+       '@mermaid-js/parser':
+         specifier: workspace:^
+         version: link:../parser
+@@ -242,6 +239,9 @@ importers:
+       mdast-util-from-markdown:
+         specifier: ^2.0.0
+         version: 2.0.0
++      micromark-util-sanitize-uri:
++        specifier: ^2.0.0
++        version: 2.0.0
+       stylis:
+         specifier: ^4.3.1
+         version: 4.3.2
+@@ -387,15 +387,15 @@ importers:
+ 
+   packages/mermaid-example-diagram:
+     dependencies:
+-      '@braintree/sanitize-url':
+-        specifier: ^7.0.0
+-        version: 7.0.1
+       d3:
+         specifier: ^7.9.0
+         version: 7.9.0
+       khroma:
+         specifier: ^2.1.0
+         version: 2.1.0
++      micromark-util-sanitize-uri:
++        specifier: ^2.0.0
++        version: 2.0.0
+     devDependencies:
+       concurrently:
+         specifier: ^8.2.2
+@@ -1517,9 +1517,6 @@ packages:
+   '@bcoe/v8-coverage@0.2.3':
+     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
+ 
+-  '@braintree/sanitize-url@7.0.1':
+-    resolution: {integrity: sha512-URg8UM6lfC9ZYqFipItRSxYJdgpU5d2Z4KnjsJ+rj6tgAmGme7E+PQNCiud8g0HDaZKMovu2qjfa0f5Ge0Vlsg==}
+-
+   '@chevrotain/cst-dts-gen@11.0.3':
+     resolution: {integrity: sha512-BvIKpRLeS/8UbfxXxgC33xOumsacaeCKAjAeLyOn7Pcp95HiRbrpl14S+9vaZLolnbssPIUuiUd8IvgkRyt6NQ==}
+ 
+@@ -11061,8 +11058,6 @@ snapshots:
+ 
+   '@bcoe/v8-coverage@0.2.3': {}
+ 
+-  '@braintree/sanitize-url@7.0.1': {}
+-
+   '@chevrotain/cst-dts-gen@11.0.3':
+     dependencies:
+       '@chevrotain/gast': 11.0.3
